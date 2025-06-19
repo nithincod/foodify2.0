@@ -17,11 +17,17 @@ dependencies:
   firebase_core: ^2.21.0
   firebase_auth: ^4.12.1
   cloud_firestore: ^4.13.5
-  provider: 
-  camera: ^0.11.0+2
+  provider: any
+  camera: ^0.9.4+5
   image_picker: ^1.1.2
   permission_handler: ^11.3.1
   shimmer: ^3.0.0
+  image: ^3.0.2
+  path_provider: ^2.0.15
+  tflite_flutter: ^0.9.0
+  tflite_flutter_plus: ^0.0.1
+
+
 
 dev_dependencies:
   flutter_test:
@@ -36,6 +42,8 @@ flutter:
   assets:
     - assets/
     - assets/images/
+    - assets/southeren_food_detector2.tflite
+    - assets/labels_southren.txt
 
   # fonts:
   #   - family: Schyler

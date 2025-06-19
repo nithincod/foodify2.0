@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +8,9 @@ import 'package:foodify2o/utils/searchinput.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'foodify2opreviewPage.dart';
+import 'package:http/http.dart' as http;
+
+import 'dart:io';
 
 class SnapTrackPage extends StatefulWidget {
   final String appBarTitle;
@@ -43,7 +48,7 @@ class _SnapTrackPageState extends State<SnapTrackPage> {
         _cameraController = CameraController(
           _cameras![0],
           ResolutionPreset.medium,
-          enableAudio: false, // Disable audio for better performance
+          enableAudio: false,
         );
         await _cameraController!.initialize();
         if (!mounted) return;
@@ -63,24 +68,27 @@ class _SnapTrackPageState extends State<SnapTrackPage> {
   }
 
   Future<void> _captureImage() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      print('Camera is not initialized');
-      return;
-    }
-    try {
-      if (!mounted) return;
-
-      // Navigate to next screen with the captured image path
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PreviewPage(camera: _cameras![0]),
-        ),
-      );
-    } catch (e) {
-      print('Error capturing image: $e');
-    }
+  if (_cameraController == null || !_cameraController!.value.isInitialized) {
+    print('Camera is not initialized');
+    return;
   }
+  try {
+    final XFile imageFile = await _cameraController!.takePicture();
+
+    // Navigate to next screen with image path
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PreviewPage(imagePath: imageFile.path, camera: _cameras![0],),
+      ),
+    );
+  } catch (e) {
+    print('Error capturing image: $e');
+  }
+}
+
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +159,7 @@ class _SnapTrackPageState extends State<SnapTrackPage> {
     );
     print('tapped');
   },
-  child: IgnorePointer( // Prevents internal TextField interactions
+  child: IgnorePointer( 
     child: SearchInput(
       textController: TextEditingController(),
       hintText: 'Search for food',

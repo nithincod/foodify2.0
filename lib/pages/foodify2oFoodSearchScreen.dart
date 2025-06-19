@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -65,6 +66,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   List<Food> foodItems = [];
   Timer? _debounce;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   void onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -74,29 +76,34 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   }
 
   Future<Map<String, int>> getTotalCalories(String date) async {
-    Map<String, int> mealCalories = {
-      'Breakfast': 0,
-      'Lunch': 0,
-      'Snacks': 0,
-      'Dinner': 0,
-    };
+  String email = _auth.currentUser!.email!;
 
-    for (String mealType in mealCalories.keys) {
-      QuerySnapshot snapshot = await _firestore
-          .collection('meals')
-          .doc(date)
-          .collection(mealType)
-          .get();
+  Map<String, int> mealCalories = {
+    'Breakfast': 0,
+    'Lunch': 0,
+    'Snacks': 0,
+    'Dinner': 0,
+  };
 
-      int totalCalories = snapshot.docs.fold(0, (sum, doc) {
-        int calories = int.tryParse(doc['calories'] ?? '0') ?? 0;
-        return sum + calories;
-      });
+  for (String mealType in mealCalories.keys) {
+    QuerySnapshot snapshot = await _firestore
+        .collection('users')
+        .doc(email)
+        .collection('meals')
+        .doc(date)
+        .collection(mealType)
+        .get();
 
-      mealCalories[mealType] = totalCalories;
-    }
-    return mealCalories;
+    int totalCalories = snapshot.docs.fold(0, (sum, doc) {
+      int calories = int.tryParse(doc['calories'] ?? '0') ?? 0;
+      return sum + calories;
+    });
+
+    mealCalories[mealType] = totalCalories;
   }
+  return mealCalories;
+}
+
 
   Future<void> fetchFoodData(String query) async {
     if (query.isEmpty) return;
@@ -139,6 +146,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   }
 
   Future<Map<String, double>> getTotalMacronutrients(String date) async {
+    String email = _auth.currentUser!.email!;
     Map<String, double> totalMacronutrients = {
       'protein': 0,
       'carbs': 0,
@@ -149,6 +157,8 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
 
     for (String mealType in mealTypes) {
       QuerySnapshot snapshot = await _firestore
+          .collection('users')
+          .doc(email)
           .collection('meals')
           .doc(date)
           .collection(mealType)
@@ -169,22 +179,28 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   }
 
   Future<void> saveFoodToFirebase(String mealType, Food food) async {
-    try {
-      String date = DateTime.now().toIso8601String().split('T')[0];
-      await _firestore
-          .collection('meals')
-          .doc(date)
-          .collection(mealType)
-          .add(food.toJson());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${food.name} added to $mealType on $date')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: $e')),
-      );
-    }
+  try {
+    String date = DateTime.now().toIso8601String().split('T')[0];
+    String email = _auth.currentUser!.email!;
+
+    await _firestore
+        .collection('users')
+        .doc(email)
+        .collection('meals')
+        .doc(date)
+        .collection(mealType)
+        .add(food.toJson());
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${food.name} added to $mealType on $date')),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to save: $e')),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

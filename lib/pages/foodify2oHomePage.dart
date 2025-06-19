@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore integration
@@ -21,6 +22,8 @@ class _Foodify2oData {
 
 
   Future<Map<String, double>> getTotalMacronutrients(String date) async {
+    final FirebaseAuth _auth = FirebaseAuth.instance;
+    String email = _auth.currentUser?.email ?? '';
     Map<String, double> totalMacronutrients = {
       'protein': 0,
       'carbs': 0,
@@ -31,6 +34,8 @@ class _Foodify2oData {
 
     for (String mealType in mealTypes) {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email)
           .collection('meals')
           .doc(date)
           .collection(mealType)
@@ -79,7 +84,7 @@ class _Foodify2oHomePageState extends State<Foodify2oHomePage>{
 @override
 void initState() {
   super.initState();
-  _fetchMealCalories();  // Fetch data when the page loads
+  _fetchMealCalories();  
 }
 
 @override

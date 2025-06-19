@@ -1,10 +1,15 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 
 class PreviewPage extends StatefulWidget {
-  final CameraDescription camera; // Receive camera description
+  final CameraDescription camera;
+  final String imagePath;
 
-  PreviewPage({required this.camera});
+  PreviewPage({required this.camera, required this.imagePath});
 
   @override
   _PreviewPageState createState() => _PreviewPageState();
@@ -13,23 +18,81 @@ class PreviewPage extends StatefulWidget {
 class _PreviewPageState extends State<PreviewPage> {
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
+  
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    _initialize();
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _initialize() async {
+    await 
+        _initializeCamera(); 
+  }
+
+
+
+   Future<void> _initializeCamera() async {
     _cameraController = CameraController(
       widget.camera,
-      ResolutionPreset.max, // High quality
+      ResolutionPreset.max,
       enableAudio: false,
     );
 
     await _cameraController!.initialize();
     if (!mounted) return;
     setState(() => _isCameraInitialized = true);
+  }
+
+  Future<void> _captureImage() async {
+    if (!_isCameraInitialized) return;
+
+    try {
+      final XFile image = await _cameraController!.takePicture();
+      print("📸 Captured: ${image.path}");
+      await detectFood(image.path);
+    } catch (e) {
+      print("❌ Capture error: $e");
+    }
+  }
+
+  Future<void> detectFood(String imagePath) async {
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('http://192.168.1.5:5001/detect'),
+    );
+
+    request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+    var response = await request.send();
+
+    if (response.statusCode == 200) {
+      final respStr = await response.stream.bytesToString();
+      final decoded = json.decode(respStr);
+      print("✅ Detection: $decoded");
+      _showResultDialog(decoded);
+    } else {
+      print('❌ Detection failed: ${response.statusCode}');
+    }
+  }
+
+  void _showResultDialog(dynamic result) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Detection Results"),
+        content: SingleChildScrollView(
+          child: Text(result.toString()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("OK"),
+          )
+        ],
+      ),
+    );
   }
 
   @override
@@ -121,19 +184,6 @@ class _PreviewPageState extends State<PreviewPage> {
       ),
     );
   }
-
-  Future<void> _captureImage() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      print('Camera not initialized');
-      return;
-    }
-    try {
-      final XFile image = await _cameraController!.takePicture();
-      print('Image captured: ${image.path}');
-    } catch (e) {
-      print('Error capturing image: $e');
-    }
-  }
 }
 
 // Custom Painter for Rounded Framing Guide
@@ -154,17 +204,14 @@ class RoundedFramePainter extends CustomPainter {
       ..lineTo(20 + cornerLength, 100)
       ..moveTo(20, 100 + cornerRadius)
       ..lineTo(20, 100 + cornerLength)
-
       ..moveTo(size.width - 20 - cornerRadius, 100)
       ..lineTo(size.width - 20 - cornerLength, 100)
       ..moveTo(size.width - 20, 100 + cornerRadius)
       ..lineTo(size.width - 20, 100 + cornerLength)
-
       ..moveTo(20 + cornerRadius, size.height - 100)
       ..lineTo(20 + cornerLength, size.height - 100)
       ..moveTo(20, size.height - 100 - cornerRadius)
       ..lineTo(20, size.height - 100 - cornerLength)
-
       ..moveTo(size.width - 20 - cornerRadius, size.height - 100)
       ..lineTo(size.width - 20 - cornerLength, size.height - 100)
       ..moveTo(size.width - 20, size.height - 100 - cornerRadius)

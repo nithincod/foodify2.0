@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -12,7 +13,9 @@ class TrackingFoodPage extends StatefulWidget {
 }
 
 class _Foodify2oData {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   Future<Map<String, double>> getTotalMacronutrients(String date) async {
+    String email = _auth.currentUser!.email!;
     Map<String, double> totalMacronutrients = {
       'protein': 0,
       'carbs': 0,
@@ -23,6 +26,8 @@ class _Foodify2oData {
 
     for (String mealType in mealTypes) {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email)
           .collection('meals')
           .doc(date)
           .collection(mealType)
@@ -62,11 +67,16 @@ class _TrackingFoodPageState extends State<TrackingFoodPage> {
   Future<void> _fetchMealCalories() async {
     try {
       final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+      final FirebaseAuth _auth = FirebaseAuth.instance;
+      String email = _auth.currentUser!.email!;
       String date = DateTime.now().toString().split(' ')[0];
 
       for (String mealType in mealCalories.keys) {
         QuerySnapshot snapshot = await _firestore
+            .collection('users')
+            .doc(email)
             .collection('meals')
+
             .doc(date)
             .collection(mealType)
             .get();
